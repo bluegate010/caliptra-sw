@@ -26,14 +26,15 @@ use caliptra_common::mailbox_api::{
     StashMeasurementReq, StashMeasurementResp,
 };
 use caliptra_common::pcr::PCR_ID_STASH_MEASUREMENT;
-use caliptra_common::verifier::FirmwareImageVerificationEnv;
 use caliptra_common::PcrLogEntry;
 use caliptra_common::PcrLogEntryId;
 use caliptra_common::{FuseLogEntryId, RomBootStatus::*};
 use caliptra_drivers::pcr_log::MeasurementLogEntry;
 use caliptra_drivers::*;
 use caliptra_image_types::{ImageManifest, IMAGE_BYTE_SIZE};
-use caliptra_image_verify::{ImageVerificationInfo, ImageVerificationLogInfo, ImageVerifier};
+use caliptra_image_verify::{
+    FirmwareImageVerificationEnv, ImageVerificationInfo, ImageVerificationLogInfo, ImageVerifier,
+};
 use caliptra_kat::KatsEnv;
 use caliptra_x509::{NotAfter, NotBefore};
 use core::mem::ManuallyDrop;

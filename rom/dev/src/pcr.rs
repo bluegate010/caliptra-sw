@@ -22,7 +22,6 @@ Note:
 --*/
 
 use caliptra_cfi_derive::{cfi_impl_fn, cfi_mod_fn};
-use caliptra_common::verifier::FirmwareImageVerificationEnv;
 use caliptra_common::{
     pcr::{PCR_ID_FMC_CURRENT, PCR_ID_FMC_JOURNEY},
     PcrLogEntry, PcrLogEntryId,
@@ -30,7 +29,7 @@ use caliptra_common::{
 use caliptra_drivers::{
     CaliptraError, CaliptraResult, PcrBank, PersistentData, PersistentDataAccessor, Sha384,
 };
-use caliptra_image_verify::ImageVerificationInfo;
+use caliptra_image_verify::{FirmwareImageVerificationEnv, ImageVerificationInfo};
 
 use zerocopy::AsBytes;
 

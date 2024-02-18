@@ -59,12 +59,10 @@ pub mod fips_self_test_cmd {
     use crate::RtBootStatus::{RtFipSelfTestComplete, RtFipSelfTestStarted};
     use caliptra_cfi_lib_git::cfi_assert_eq_8_words;
     use caliptra_common::HexBytes;
-    use caliptra_common::{
-        verifier::FirmwareImageVerificationEnv, FMC_ORG, FMC_SIZE, RUNTIME_ORG, RUNTIME_SIZE,
-    };
+    use caliptra_common::{FMC_ORG, FMC_SIZE, RUNTIME_ORG, RUNTIME_SIZE};
     use caliptra_drivers::{ResetReason, ShaAccLockState};
     use caliptra_image_types::RomInfo;
-    use caliptra_image_verify::ImageVerifier;
+    use caliptra_image_verify::{FirmwareImageVerificationEnv, ImageVerifier};
     use zerocopy::AsBytes;
 
     // Helper function to create a slice from a memory region

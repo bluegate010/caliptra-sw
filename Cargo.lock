@@ -853,8 +853,6 @@ dependencies = [
  "caliptra-api",
  "caliptra-cpu",
  "caliptra-drivers",
- "caliptra-image-types",
- "caliptra-image-verify",
  "caliptra-registers",
  "ufmt",
  "zerocopy",

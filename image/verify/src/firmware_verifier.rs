@@ -4,7 +4,7 @@ Licensed under the Apache-2.0 license.
 
 File Name:
 
-    verifier.rs
+    firmware_verifier.rs
 
 Abstract:
 
@@ -12,9 +12,9 @@ Abstract:
 
 --*/
 
+use crate::ImageVerificationEnv;
 use caliptra_drivers::*;
 use caliptra_image_types::*;
-use caliptra_image_verify::ImageVerificationEnv;
 use core::ops::Range;
 
 use caliptra_drivers::memory_layout::ICCM_RANGE;

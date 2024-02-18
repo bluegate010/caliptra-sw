@@ -13,12 +13,14 @@ Abstract:
 --*/
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod firmware_verifier;
 mod verifier;
 
 use caliptra_drivers::*;
 use caliptra_image_types::*;
 use core::ops::Range;
 
+pub use firmware_verifier::FirmwareImageVerificationEnv;
 pub use verifier::ImageVerifier;
 
 pub const MAX_RUNTIME_SVN: u32 = 128;

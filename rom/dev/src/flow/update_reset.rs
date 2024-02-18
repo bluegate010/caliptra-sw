@@ -14,7 +14,6 @@ Abstract:
 #[cfg(feature = "fake-rom")]
 use crate::flow::fake::FakeRomImageVerificationEnv;
 use crate::{cprintln, pcr, rom_env::RomEnv};
-use caliptra_common::verifier::FirmwareImageVerificationEnv;
 
 use caliptra_cfi_derive::cfi_impl_fn;
 use caliptra_common::mailbox_api::CommandId;
@@ -26,7 +25,7 @@ use caliptra_drivers::{
 use caliptra_drivers::{DataVault, PersistentData};
 use caliptra_error::{CaliptraError, CaliptraResult};
 use caliptra_image_types::ImageManifest;
-use caliptra_image_verify::{ImageVerificationInfo, ImageVerifier};
+use caliptra_image_verify::{FirmwareImageVerificationEnv, ImageVerificationInfo, ImageVerifier};
 use zerocopy::AsBytes;
 
 #[derive(Default)]

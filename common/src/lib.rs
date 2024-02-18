@@ -14,7 +14,6 @@ pub mod dice;
 pub mod error_handler;
 pub mod fips;
 pub mod keyids;
-pub mod verifier;
 pub mod wdt;
 
 ///merge imports
