@@ -793,65 +793,6 @@ fn fw_load_error_fmc_entry_point_unaligned() {
 }
 
 #[test]
-fn fw_load_error_fmc_svn_greater_than_max_supported() {
-    // Generate image
-    let image_options = ImageOptions {
-        fmc_svn: 33,
-        ..Default::default()
-    };
-    let fw_image = build_fw_image(image_options);
-
-    // Set fuses
-    let gen = ImageGenerator::new(Crypto::default());
-    let vendor_pubkey_digest = gen
-        .vendor_pubkey_digest(&fw_image.manifest.preamble)
-        .unwrap();
-    let fuses = caliptra_hw_model::Fuses {
-        life_cycle: DeviceLifecycle::Manufacturing,
-        anti_rollback_disable: false,
-        key_manifest_pk_hash: vendor_pubkey_digest,
-        ..Default::default()
-    };
-
-    fw_load_error_flow(
-        Some(fw_image),
-        Some(fuses),
-        CaliptraError::IMAGE_VERIFIER_ERR_FMC_SVN_GREATER_THAN_MAX_SUPPORTED.into(),
-    );
-}
-
-// IMAGE_VERIFIER_ERR_FMC_SVN_LESS_THAN_MIN_SUPPORTED is defined but never used in the code (svn is a u32)
-
-#[test]
-fn fw_load_error_fmc_svn_less_than_fuse() {
-    // Generate image
-    let image_options = ImageOptions {
-        fmc_svn: 1,
-        ..Default::default()
-    };
-    let fw_image = build_fw_image(image_options);
-
-    // Set fuses
-    let gen = ImageGenerator::new(Crypto::default());
-    let vendor_pubkey_digest = gen
-        .vendor_pubkey_digest(&fw_image.manifest.preamble)
-        .unwrap();
-    let fuses = caliptra_hw_model::Fuses {
-        life_cycle: DeviceLifecycle::Manufacturing,
-        anti_rollback_disable: false,
-        key_manifest_pk_hash: vendor_pubkey_digest,
-        fmc_key_manifest_svn: 0b11, // fuse svn = 2
-        ..Default::default()
-    };
-
-    fw_load_error_flow(
-        Some(fw_image),
-        Some(fuses),
-        CaliptraError::IMAGE_VERIFIER_ERR_FMC_SVN_LESS_THAN_FUSE.into(),
-    );
-}
-
-#[test]
 fn fw_load_error_runtime_load_addr_invalid() {
     // Generate image
     let mut fw_image = build_fw_image(ImageOptions::default());
@@ -912,10 +853,13 @@ fn fw_load_error_runtime_entry_point_unaligned() {
 }
 
 #[test]
-fn fw_load_error_runtime_svn_greater_than_max_supported() {
+fn fw_load_error_firmware_svn_greater_than_max_supported() {
     // Generate image
     let image_options = ImageOptions {
-        app_svn: caliptra_image_verify::MAX_RUNTIME_SVN + 1,
+        vendor_config: ImageGeneratorVendorConfig {
+            fw_svn: caliptra_image_verify::MAX_FIRMWARE_SVN + 1,
+            ..caliptra_image_fake_keys::VENDOR_CONFIG_KEY_0
+        },
         ..Default::default()
     };
     let fw_image = build_fw_image(image_options);
@@ -935,17 +879,18 @@ fn fw_load_error_runtime_svn_greater_than_max_supported() {
     fw_load_error_flow(
         Some(fw_image),
         Some(fuses),
-        CaliptraError::IMAGE_VERIFIER_ERR_RUNTIME_SVN_GREATER_THAN_MAX_SUPPORTED.into(),
+        CaliptraError::IMAGE_VERIFIER_ERR_FIRMWARE_SVN_GREATER_THAN_MAX_SUPPORTED.into(),
     );
 }
 
-// IMAGE_VERIFIER_ERR_RUNTIME_SVN_LESS_THAN_MIN_SUPPORTED is defined but never used in the code (svn is a u32)
-
 #[test]
-fn fw_load_error_runtime_svn_less_than_fuse() {
+fn fw_load_error_firmware_svn_less_than_fuse() {
     // Generate image
     let image_options = ImageOptions {
-        app_svn: 62,
+        vendor_config: ImageGeneratorVendorConfig {
+            fw_svn: 62,
+            ..caliptra_image_fake_keys::VENDOR_CONFIG_KEY_0
+        },
         ..Default::default()
     };
     let fw_image = build_fw_image(image_options);
@@ -959,14 +904,14 @@ fn fw_load_error_runtime_svn_less_than_fuse() {
         life_cycle: DeviceLifecycle::Manufacturing,
         anti_rollback_disable: false,
         key_manifest_pk_hash: vendor_pubkey_digest,
-        runtime_svn: [0xffff_ffff, 0x7fff_ffff, 0, 0], // fuse svn = 63
+        fw_svn: [0xffff_ffff, 0x7fff_ffff, 0, 0], // fuse svn = 63
         ..Default::default()
     };
 
     fw_load_error_flow(
         Some(fw_image),
         Some(fuses),
-        CaliptraError::IMAGE_VERIFIER_ERR_RUNTIME_SVN_LESS_THAN_FUSE.into(),
+        CaliptraError::IMAGE_VERIFIER_ERR_FIRMWARE_SVN_LESS_THAN_FUSE.into(),
     );
 }
 

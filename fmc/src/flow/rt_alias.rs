@@ -112,9 +112,6 @@ impl RtAliasLayer {
             .set_pcr_lock(caliptra_common::RT_FW_JOURNEY_PCR);
         cprintln!("[alias rt] Lock RT PCRs Done");
 
-        cprintln!("[alias rt] Populate DV");
-        Self::populate_dv(env)?;
-        cprintln!("[alias rt] Populate DV Done");
         report_boot_status(crate::FmcBootStatus::RtMeasurementComplete as u32);
 
         // Retrieve Dice Input Layer from Hand Off and Derive Key
@@ -182,27 +179,6 @@ impl RtAliasLayer {
                 Err(CaliptraError::FMC_UNKNOWN_RESET)
             }
         }
-    }
-
-    /// Populate Data Vault
-    ///
-    /// # Arguments
-    ///
-    /// * `env` - FMC Environment
-    /// * `hand_off` - HandOff
-    #[cfg_attr(not(feature = "no-cfi"), cfi_impl_fn)]
-    pub fn populate_dv(env: &mut FmcEnv) -> CaliptraResult<()> {
-        let rt_svn = HandOff::rt_svn(env);
-        let reset_reason = env.soc_ifc.reset_reason();
-
-        let rt_min_svn = if reset_reason == ResetReason::ColdReset {
-            cfi_assert_eq(reset_reason, ResetReason::ColdReset);
-            rt_svn
-        } else {
-            core::cmp::min(rt_svn, HandOff::rt_min_svn(env))
-        };
-
-        HandOff::set_and_lock_rt_min_svn(env, rt_min_svn)
     }
 
     fn get_cert_validity_info(
@@ -306,7 +282,7 @@ impl RtAliasLayer {
         let serial_number = &X509::cert_sn(env, pub_key)?;
 
         let rt_tci: [u8; 48] = HandOff::rt_tci(env).into();
-        let rt_svn = HandOff::rt_svn(env) as u8;
+        let fw_svn = HandOff::fw_svn(env) as u8;
 
         // Certificate `To Be Signed` Parameters
         let params = RtAliasCertTbsParams {
@@ -320,7 +296,7 @@ impl RtAliasLayer {
             public_key: &pub_key.to_der(),
             not_before,
             not_after,
-            tcb_info_rt_svn: &rt_svn.to_be_bytes(),
+            tcb_info_fw_svn: &fw_svn.to_be_bytes(),
             tcb_info_rt_tci: &rt_tci,
             // Are there any fields missing?
         };

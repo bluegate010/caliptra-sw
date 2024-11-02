@@ -223,8 +223,8 @@ pub struct FirmwareHandoffTable {
     /// Index of FMC Certificate Signature S Component in the Data Vault.
     pub fmc_cert_sig_s_dv_hdl: HandOffDataHandle,
 
-    /// Index of FMC SVN value in the Data Vault
-    pub fmc_svn_dv_hdl: HandOffDataHandle,
+    /// Index of FMC SVN value in the Data Vault. Deprecated.
+    pub deprecated_fmc_svn_dv_hdl: HandOffDataHandle,
 
     /// Index of RT TCI value in the Data Vault.
     pub rt_tci_dv_hdl: HandOffDataHandle,
@@ -235,11 +235,11 @@ pub struct FirmwareHandoffTable {
     /// Index of RT Private Alias Key in the Key Vault.
     pub rt_priv_key_kv_hdl: HandOffDataHandle,
 
-    /// Index of RT SVN value in the Data Vault
-    pub rt_svn_dv_hdl: HandOffDataHandle,
+    /// Index of FW SVN value in the Data Vault
+    pub fw_svn_dv_hdl: HandOffDataHandle,
 
-    /// Index of RT Min SVN value in the Data Vault
-    pub rt_min_svn_dv_hdl: HandOffDataHandle,
+    /// Index of FW Min SVN value in the Data Vault
+    pub fw_min_svn_dv_hdl: HandOffDataHandle,
 
     /// LdevId TBS Address
     pub ldevid_tbs_addr: u32,
@@ -289,20 +289,14 @@ pub struct FirmwareHandoffTable {
     /// RtAlias TBS Size.
     pub rtalias_tbs_size: u16,
 
-    /// Maximum value RT FW SVN can take.
-    #[cfg(any(feature = "fmc", feature = "runtime"))]
-    pub rt_hash_chain_max_svn: u16,
+    /// Maximum value FW SVN can take.
+    pub fw_hash_chain_max_svn: u16,
 
     /// Index of RT hash chain value in the Key Vault.
-    #[cfg(any(feature = "fmc", feature = "runtime"))]
     pub rt_hash_chain_kv_hdl: HandOffDataHandle,
 
     /// Reserved for future use.
-    #[cfg(any(feature = "fmc", feature = "runtime"))]
     pub reserved: [u8; 1636],
-
-    #[cfg(not(any(feature = "fmc", feature = "runtime")))]
-    pub reserved: [u8; 1642],
 }
 
 impl Default for FirmwareHandoffTable {
@@ -321,12 +315,12 @@ impl Default for FirmwareHandoffTable {
             fmc_pub_key_y_dv_hdl: FHT_INVALID_HANDLE,
             fmc_cert_sig_r_dv_hdl: FHT_INVALID_HANDLE,
             fmc_cert_sig_s_dv_hdl: FHT_INVALID_HANDLE,
-            fmc_svn_dv_hdl: FHT_INVALID_HANDLE,
+            deprecated_fmc_svn_dv_hdl: FHT_INVALID_HANDLE,
             rt_tci_dv_hdl: FHT_INVALID_HANDLE,
             rt_cdi_kv_hdl: FHT_INVALID_HANDLE,
             rt_priv_key_kv_hdl: FHT_INVALID_HANDLE,
-            rt_svn_dv_hdl: FHT_INVALID_HANDLE,
-            rt_min_svn_dv_hdl: FHT_INVALID_HANDLE,
+            fw_svn_dv_hdl: FHT_INVALID_HANDLE,
+            fw_min_svn_dv_hdl: FHT_INVALID_HANDLE,
             ldevid_tbs_addr: 0,
             fmcalias_tbs_addr: 0,
             ldevid_tbs_size: 0,
@@ -343,16 +337,9 @@ impl Default for FirmwareHandoffTable {
             idev_dice_pub_key: Ecc384PubKey::default(),
             rom_info_addr: RomAddr::new(FHT_INVALID_ADDRESS),
             rtalias_tbs_size: 0,
-
-            #[cfg(any(feature = "fmc", feature = "runtime"))]
-            rt_hash_chain_max_svn: 0,
-            #[cfg(any(feature = "fmc", feature = "runtime"))]
+            fw_hash_chain_max_svn: 0,
             rt_hash_chain_kv_hdl: HandOffDataHandle(0),
-            #[cfg(any(feature = "fmc", feature = "runtime"))]
             reserved: [0u8; 1636],
-
-            #[cfg(not(any(feature = "fmc", feature = "runtime")))]
-            reserved: [0u8; 1642],
         }
     }
 }
@@ -395,15 +382,14 @@ pub fn print_fht(fht: &FirmwareHandoffTable) {
         "FMC Certificate Signature S DV Handle: 0x{:08x}",
         fht.fmc_cert_sig_s_dv_hdl.0
     );
-    crate::cprintln!("FMC SVN DV Handle: 0x{:08x}", fht.fmc_svn_dv_hdl.0);
     crate::cprintln!("RT TCI DV Handle: 0x{:08x}", fht.rt_tci_dv_hdl.0);
     crate::cprintln!("RT CDI KV Handle: 0x{:08x}", fht.rt_cdi_kv_hdl.0);
     crate::cprintln!(
         "RT Private Key KV Handle: 0x{:08x}",
         fht.rt_priv_key_kv_hdl.0
     );
-    crate::cprintln!("RT SVN DV Handle: 0x{:08x}", fht.rt_svn_dv_hdl.0);
-    crate::cprintln!("RT Min SVN DV Handle: 0x{:08x}", fht.rt_min_svn_dv_hdl.0);
+    crate::cprintln!("FW SVN DV Handle: 0x{:08x}", fht.fw_svn_dv_hdl.0);
+    crate::cprintln!("FW Min SVN DV Handle: 0x{:08x}", fht.fw_min_svn_dv_hdl.0);
 
     crate::cprintln!("LdevId TBS Address: 0x{:08x}", fht.ldevid_tbs_addr);
     crate::cprintln!("LdevId TBS Size: {} bytes", fht.ldevid_tbs_size);

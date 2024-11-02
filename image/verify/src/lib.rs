@@ -21,11 +21,11 @@ use core::ops::Range;
 
 pub use verifier::ImageVerifier;
 
-pub const MAX_RUNTIME_SVN: u32 = 128;
+pub const MAX_FIRMWARE_SVN: u32 = 128;
 
 /// Image Verifification Executable Info
 #[derive(Default, Debug)]
-pub struct ImageSvnLogInfo {
+pub struct BundleSvnLogInfo {
     pub manifest_svn: u32,
     pub reserved: u32,
     pub fuse_svn: u32,
@@ -42,12 +42,6 @@ pub struct ImageVerificationExeInfo {
 
     /// Entry Point
     pub entry_point: u32,
-
-    /// Security version number
-    pub svn: u32,
-
-    /// The effective fuse SVN for this image
-    pub effective_fuse_svn: u32,
 
     /// Digest of the image
     pub digest: ImageDigest,
@@ -68,11 +62,8 @@ pub struct ImageVerificationLogInfo {
     /// Vendor LMS Public Key Revocation Fuse
     pub fuse_vendor_lms_pub_key_revocation: Option<u32>,
 
-    /// First Mutable code's logging information
-    pub fmc_log_info: ImageSvnLogInfo,
-
-    /// Runtime Mutable code's logging information
-    pub rt_log_info: ImageSvnLogInfo,
+    /// Firmware's SVN logging information
+    pub fw_log_info: BundleSvnLogInfo,
 }
 
 /// Verified image information
@@ -89,6 +80,12 @@ pub struct ImageVerificationInfo {
 
     /// Whether `owner_pub_keys_digest` was in fuses
     pub owner_pub_keys_digest_in_fuses: bool,
+
+    /// The SVN for this firmware bundle
+    pub fw_svn: u32,
+
+    /// The effective fuse SVN for this firmware bundle
+    pub effective_fuse_svn: u32,
 
     /// First mutable code
     pub fmc: ImageVerificationExeInfo,
@@ -160,11 +157,8 @@ pub trait ImageVerificationEnv {
     // Save the fmc digest in the data vault on cold boot
     fn get_fmc_digest_dv(&self) -> ImageDigest;
 
-    // Get Fuse FMC Key Manifest SVN
-    fn fmc_fuse_svn(&self) -> u32;
-
-    // Get Runtime fuse SVN
-    fn runtime_fuse_svn(&self) -> u32;
+    // Get FW SVN fuse value
+    fn fw_fuse_svn(&self) -> u32;
 
     // ICCM Range
     fn iccm_range(&self) -> Range<u32>;

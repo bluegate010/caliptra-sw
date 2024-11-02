@@ -88,16 +88,16 @@
 | Image Verifier | Verifier | FmcLoadAddrUnaligned |0x000B0022 |
 | Image Verifier | Verifier | FmcEntryPointInvalid |0x000B0023 |
 | Image Verifier | Verifier | FmcEntryPointUnaligned |0x000B0024 |
-| Image Verifier | Verifier | FmcSvnGreaterThanMaxSupported |0x000B0025 |
-| Image Verifier | Verifier | FmcSvnLessThanMinSupported |0x000B0026 |
-| Image Verifier | Verifier | FmcSvnLessThanFuse |0x000B0027 |
+| Image Verifier | Verifier | (Deprecated) FmcSvnGreaterThanMaxSupported |0x000B0025 |
+| Image Verifier | Verifier | (Deprecated) FmcSvnLessThanMinSupported |0x000B0026 |
+| Image Verifier | Verifier | (Deprecated) FmcSvnLessThanFuse |0x000B0027 |
 | Image Verifier | Verifier | RuntimeLoadAddrInvalid |0x000B0028 |
 | Image Verifier | Verifier | RuntimeLoadAddrUnaligned |0x000B0029 |
 | Image Verifier | Verifier | RuntimeEntryPointInvalid |0x000B002A |
 | Image Verifier | Verifier | RuntimeEntryPointUnaligned |0x000B002B |
-| Image Verifier | Verifier | RuntimeSvnGreaterThanMaxSupported |0x000B002C |
-| Image Verifier | Verifier | RuntimeSvnLessThanMinSupported |0x000B002D |
-| Image Verifier | Verifier | RuntimeSvnLessThanFuse |0x000B002E |
+| Image Verifier | Verifier | FirmwareSvnGreaterThanMaxSupported |0x000B002C |
+| Image Verifier | Verifier | (Deprecated) FirmwareSvnLessThanMinSupported |0x000B002D |
+| Image Verifier | Verifier | FirmwareSvnLessThanFuse |0x000B002E |
 | Driver | LMS | InvalidLmsAlgorithmType |0x000C0001 |
 | Driver | LMS | InvalidLmotsAlgorithmType |0x000C0002 |
 | Driver | LMS | InvalidWinternitzParameter |0x000C0003 |

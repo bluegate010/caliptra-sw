@@ -9,6 +9,7 @@ use caliptra_common::mailbox_api::{
     CommandId, GetFmcAliasCertResp, GetLdevCertResp, MailboxReqHeader, MailboxRespHeader,
 };
 use caliptra_hw_model::{BootParams, HwModel, InitParams};
+use caliptra_image_gen::ImageGeneratorVendorConfig;
 use caliptra_test::{
     derive::{DoeInput, DoeOutput, LDevId},
     swap_word_bytes, swap_word_bytes_inplace,
@@ -55,7 +56,10 @@ fn fake_boot_test() {
         &FMC_FAKE_WITH_UART,
         &APP_WITH_UART,
         ImageOptions {
-            fmc_svn: 9,
+            vendor_config: ImageGeneratorVendorConfig {
+                fw_svn: 9,
+                ..caliptra_image_fake_keys::VENDOR_CONFIG_KEY_0
+            },
             ..Default::default()
         },
     )
@@ -77,7 +81,6 @@ fn fake_boot_test() {
             fuses: Fuses {
                 key_manifest_pk_hash: vendor_pk_desc_hash,
                 owner_pk_hash: owner_pk_desc_hash,
-                fmc_key_manifest_svn: 0b1111111,
                 ..Default::default()
             },
             fw_image: Some(&image.to_bytes().unwrap()),
@@ -256,9 +259,9 @@ fn fake_boot_test() {
             owner_pub_key_from_fuses: true,
             ecc_vendor_pub_key_index: image.manifest.preamble.vendor_ecc_pub_key_idx,
             fmc_digest: FMC_CANNED_DIGEST,
-            fmc_svn: image.manifest.fmc.svn,
+            fw_svn: image.manifest.fmc.svn,
             // This is from the SVN in the fuses (7 bits set)
-            fmc_fuse_svn: 7,
+            fw_fuse_svn: 7,
             lms_vendor_pub_key_index: u32::MAX,
             rom_verify_config: 0, // RomVerifyConfig::EcdsaOnly
         }),

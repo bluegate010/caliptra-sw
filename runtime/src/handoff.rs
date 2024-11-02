@@ -46,22 +46,22 @@ impl RtHandoff<'_> {
         }
     }
 
-    /// Retrieve runtime SVN.
-    pub fn rt_svn(&self) -> CaliptraResult<u32> {
-        self.read_from_ds(self.fht.rt_svn_dv_hdl.try_into()?)
-            .map_err(|_| CaliptraError::RUNTIME_RT_SVN_HANDOFF_FAILED)
+    /// Retrieve firmware SVN.
+    pub fn fw_svn(&self) -> CaliptraResult<u32> {
+        self.read_from_ds(self.fht.fw_svn_dv_hdl.try_into()?)
+            .map_err(|_| CaliptraError::RUNTIME_FW_SVN_HANDOFF_FAILED)
     }
 
-    /// Retrieve runtime minimum SVN.
-    pub fn rt_min_svn(&self) -> CaliptraResult<u32> {
-        self.read_from_ds(self.fht.rt_min_svn_dv_hdl.try_into()?)
-            .map_err(|_| CaliptraError::RUNTIME_RT_MIN_SVN_HANDOFF_FAILED)
+    /// Retrieve firmware minimum SVN.
+    pub fn fw_min_svn(&self) -> CaliptraResult<u32> {
+        self.read_from_ds(self.fht.fw_min_svn_dv_hdl.try_into()?)
+            .map_err(|_| CaliptraError::RUNTIME_FW_MIN_SVN_HANDOFF_FAILED)
     }
 
-    /// Retrieve FMC SVN.
-    pub fn fmc_svn(&self) -> CaliptraResult<u32> {
-        self.read_from_ds(self.fht.fmc_svn_dv_hdl.try_into()?)
-            .map_err(|_| CaliptraError::RUNTIME_FMC_SVN_HANDOFF_FAILED)
+    /// Retrieve cold-boot deprecated FMC SVN.
+    pub fn deprecated_fmc_svn(&self) -> CaliptraResult<u32> {
+        self.read_from_ds(self.fht.deprecated_fmc_svn_dv_hdl.try_into()?)
+            .map_err(|_| CaliptraError::RUNTIME_DEPRECATED_FMC_SVN_HANDOFF_FAILED)
     }
 
     /// Retrieve the RT FW hash chain.

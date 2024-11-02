@@ -114,13 +114,13 @@ fields may not be changed or removed). Table revisions with different Major Vers
 | fmc_cert_sig_ecdsa_r_dv_hdl | 4            | ROM        | Handle of FMC Certificate ECDSA Signature R Component in the DCCM datavault. |
 | fmc_cert_sig_ecdsa_s_dv_hdl | 4            | ROM        | Handle of FMC Certificate ECDSA Signature S Component in the DCCM datavault.                                       |
 | fmc_cert_sig_mldsa_dv_hdl | 4            | ROM        | Handle of FMC Certificate MLDSA Signature in the DCCM datavault. |
-| fmc_svn_dv_hdl        | 4            | ROM        | Handle of FMC SVN value in the DCCM datavault. |
+| deprecated_fmc_svn_dv_hdl        | 4            | ROM        | Handle of FMC SVN value in the DCCM datavault. Deprecated. |
 | rt_tci_dv_hdl         | 4            | ROM        | Handle of RT TCI value in the DCCM datavault. |
 | rt_cdi_kv_hdl         | 4            | FMC        | Handle of RT CDI value in the Key Vault. |
 | rt_priv_key_ecdsa_kv_hdl    | 4            | FMC        | Handle of RT Alias ECDSA Private Key in the Key Vault. |
 | rt_keygen_seed_mldsa_kv_hdl    | 4            | FMC        | Handle of RT Alias MLDSA Key Generation Seed in the Key Vault. |
-| rt_svn_dv_hdl         | 4            | FMC        | Handle of RT SVN value in the DCCM datavault. |
-| rt_min_svn_dv_hdl     | 4            | FMC        | Handle of Min RT SVN value in the DCCM datavault. |
+| fw_svn_dv_hdl         | 4            | FMC        | Handle of FW SVN value in the DCCM datavault. |
+| fw_min_svn_dv_hdl     | 4            | FMC        | Handle of Min FW SVN value in the DCCM datavault. |
 | ldevid_tbs_ecdsa_addr       | 4            | ROM        | Local Device ID ECDSA TBS Address. |
 | fmcalias_tbs_ecdsa_addr     | 4            | ROM        | FMC Alias TBS ECDSA Address. |
 | ldevid_tbs_mldsa_addr       | 4            | ROM        | Local Device ID MLDSA TBS Address. |
@@ -212,10 +212,6 @@ These fields provide the Handle into the DCCM datavault where the ECDSA Signatur
 
 This field provides the Handle into the DCCM datavault where the MLDSA Signature<sub>FMC</sub> is stored.
 
-### fmc_svn_dv_hdl
-
-This field provides the Handle into the DCCM datavault where the SVN<sub>FMC</sub> is stored.
-
 ### rt_tci_dv_hdl
 
 This field provides the Handle into the DCCM datavault where the TCI<sub>RT</sub> is stored. TCI<sub>RT</sub> is a SHA-384 Hash of the RT FW Module.
@@ -232,13 +228,13 @@ This field provides the Handle into the Key Vault where the ECDSA PrivateKey<sub
 
 This field provides the Handle into the Key Vault where the MLDSA Key Generation Seed<sub>RT</sub> is stored.
 
-### rt_svn_dv_hdl
+### fw_dv_hdl
 
-This field provides the Handle into the DCCM datavault where the SVN<sub>RT</sub> is stored.
+This field provides the Handle into the DCCM datavault where the firmware SVN is stored.
 
-### rt_min_svn_dv_hdl
+### fw_min_svn_dv_hdl
 
-This field provides the Handle into the DCCM datavault where the Min-SVN<sub>RT</sub> is stored. Upon cold-boot this is set to SVN<sub>RT</sub>. On subsequent boots this is set to MIN(SVN<sub>RT</sub>, Min-SVN<sub>RT</sub>).
+This field provides the Handle into the DCCM datavault where the firmware Min-SVN is stored. Upon cold-boot this is set to the firmware SVN. On subsequent boots this is set to MIN(firmware SVN, firmware Min-SVN).
 
 ### ldevid_tbs_ecdsa_addr
 
@@ -336,10 +332,10 @@ This field provides the size of the *To Be Signed* portion of the Runtime Alias 
 
 This field provides the size of the *To Be Signed* portion of the Runtime Alias MLDSA certificate.
 
-### rt_hash_chain_max_svn
+### fw_hash_chain_max_svn
 
-This field informs firmware of the maximum RT SVN, which value was used
-to determine the length of RT FW's hash chain.
+This field informs firmware of the maximum FW SVN, which value was used
+to determine the length of FW's hash chain.
 
 ### rt_hash_chain_kv_hdl
 
@@ -410,7 +406,7 @@ The following list of steps are to be performed by FMC on each boot when ROM jum
 | 🔒Alias FMC Cert Signature S     |
 | 🔒Alias FMC Cert MLDSA Signature |
 | 🔒FMC Digest                     |
-| 🔒FMC SVN                        |
+| 🔒FW SVN                         |
 | 🔒Owner PK Hash                  |
 | 🔒Manufacturer Public Key Index  |
 
@@ -512,7 +508,7 @@ sequenceDiagram
 | 🔒Alias FMC Cert ECDSA Signature S |
 | 🔒Alias FMC Cert MLDSA Signature   |
 | 🔒FMC Digest                       |
-| 🔒FMC SVN                          |
+| 🔒FW SVN                           |
 | 🔒Owner PK Hash                    |
 | 🔒Manufacturer Public Key Index    |
 
