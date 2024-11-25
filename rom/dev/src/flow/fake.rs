@@ -221,6 +221,17 @@ pub fn copy_canned_ldev_cert(env: &mut RomEnv) -> CaliptraResult<()> {
     Ok(())
 }
 
+// Used to derive the firmware's hash chain.
+fn initialize_fake_ldevid_cdi(env: &mut RomEnv) -> CaliptraResult<()> {
+    env.hmac384.hmac(
+        &HmacKey::Array4x12(&Array4x12::default()),
+        &HmacData::Slice(b""),
+        &mut env.trng,
+        KeyWriteArgs::new(KEY_ID_ROM_FMC_CDI, KeyUsage::default().set_hmac_key_en()).into(),
+        HmacMode::Hmac384,
+    )
+}
+
 pub fn copy_canned_fmc_alias_cert(env: &mut RomEnv) -> CaliptraResult<()> {
     let data_vault = &mut env.persistent_data.get_mut().data_vault;
 

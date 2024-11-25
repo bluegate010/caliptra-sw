@@ -24,6 +24,7 @@ mod drivers;
 pub mod fips;
 mod get_idev_csr;
 pub mod handoff;
+pub mod hash_chain;
 mod hmac;
 pub mod info;
 mod invoke_dpe;
@@ -59,6 +60,7 @@ pub use fips::{fips_self_test_cmd, fips_self_test_cmd::SelfTestStatus};
 pub use populate_idev::PopulateIDevIdCertCmd;
 
 pub use get_idev_csr::GetIdevCsrCmd;
+pub use hash_chain::HashChain;
 pub use info::{FwInfoCmd, IDevIdInfoCmd};
 pub use invoke_dpe::InvokeDpeCmd;
 pub use pcr::IncrementPcrResetCounterCmd;
