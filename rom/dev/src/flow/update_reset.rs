@@ -13,17 +13,17 @@ Abstract:
 --*/
 #[cfg(feature = "fake-rom")]
 use crate::flow::fake::FakeRomImageVerificationEnv;
+use crate::hash_chain;
 use crate::{cprintln, pcr, rom_env::RomEnv};
 #[cfg(not(feature = "no-cfi"))]
 use caliptra_cfi_derive::cfi_impl_fn;
 use caliptra_common::mailbox_api::CommandId;
 use caliptra_common::verifier::FirmwareImageVerificationEnv;
 use caliptra_common::RomBootStatus::*;
-use caliptra_drivers::report_fw_error_non_fatal;
 use caliptra_drivers::{
-    okref, report_boot_status, MailboxRecvTxn, ResetReason, WarmResetEntry4, WarmResetEntry48,
+    okref, report_boot_status, report_fw_error_non_fatal, DataVault, Hmac, MailboxRecvTxn,
+    PersistentData, ResetReason, Trng, WarmResetEntry4, WarmResetEntry48,
 };
-use caliptra_drivers::{DataVault, PersistentData};
 use caliptra_error::{CaliptraError, CaliptraResult};
 use caliptra_image_types::ImageManifest;
 use caliptra_image_verify::{ImageVerificationInfo, ImageVerifier};
@@ -83,7 +83,7 @@ impl UpdateResetFlow {
             report_boot_status(UpdateResetImageVerificationComplete.into());
 
             // Populate data vault
-            Self::populate_data_vault(venv.data_vault, info);
+            Self::populate_data_vault(venv.data_vault, info, &mut env.hmac, &mut env.trng)?;
 
             // Extend PCR0 and PCR1
             pcr::extend_pcrs(&mut venv, info, &mut env.persistent_data)?;
@@ -212,11 +212,16 @@ impl UpdateResetFlow {
     ///
     /// * `env`  - ROM Environment
     /// * `info` - Image Verification Info
-    fn populate_data_vault(data_vault: &mut DataVault, info: &ImageVerificationInfo) {
+    fn populate_data_vault(
+        data_vault: &mut DataVault,
+        info: &ImageVerificationInfo,
+        hmac: &mut Hmac,
+        trng: &mut Trng,
+    ) -> CaliptraResult<()> {
         data_vault.write_warm_reset_entry48(WarmResetEntry48::RtTci, &info.runtime.digest.into());
 
-        let cur_min_svn = data_vault.read_warm_reset_entry4(WarmResetEntry4::RtMinSvn);
-        let new_min_svn = core::cmp::min(cur_min_svn, info.fw_svn);
+        let old_min_svn = data_vault.read_warm_reset_entry4(WarmResetEntry4::RtMinSvn);
+        let new_min_svn = core::cmp::min(old_min_svn, info.fw_svn);
 
         data_vault.write_warm_reset_entry4(WarmResetEntry4::RtSvn, info.fw_svn);
         data_vault.write_warm_reset_entry4(WarmResetEntry4::RtMinSvn, new_min_svn);
@@ -224,5 +229,14 @@ impl UpdateResetFlow {
         data_vault.write_warm_reset_entry4(WarmResetEntry4::RtEntryPoint, info.runtime.entry_point);
 
         report_boot_status(UpdateResetPopulateDataVaultComplete.into());
+
+        // Extend the hash chain if the min-SVN is being decremented.
+        let decrement_by = old_min_svn - new_min_svn;
+        cprintln!("[update-reset] Extending hash chain by {}", decrement_by);
+
+        hash_chain::extend_hash_chain(hmac, trng, decrement_by)?;
+        report_boot_status(UpdateResetExtendHashChainComplete.into());
+
+        Ok(())
     }
 }

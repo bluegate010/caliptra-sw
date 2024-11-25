@@ -480,6 +480,8 @@ impl CaliptraError {
         CaliptraError::new_const(0x000E0051);
     pub const RUNTIME_GET_IDEV_ID_UNSUPPORTED_ROM: CaliptraError =
         CaliptraError::new_const(0x000E0052);
+    pub const RUNTIME_HASH_CHAIN_TARGET_SVN_TOO_LARGE: CaliptraError =
+        CaliptraError::new_const(0x000E0053);
 
     /// FMC Errors
     pub const FMC_GLOBAL_NMI: CaliptraError = CaliptraError::new_const(0x000F0001);
@@ -538,6 +540,7 @@ impl CaliptraError {
     pub const FW_PROC_MAILBOX_RESERVED_PAUSER: CaliptraError = CaliptraError::new_const(0x01020009);
     pub const FW_PROC_MAILBOX_GET_IDEV_CSR_UNPROVISIONED_CSR: CaliptraError =
         CaliptraError::new_const(0x0102000A);
+    pub const FW_PROC_SVN_TOO_LARGE: CaliptraError = CaliptraError::new_const(0x0102000B);
 
     /// FMC Alias Layer : Certificate Verification Failure.
     pub const FMC_ALIAS_CERT_VERIFY: CaliptraError = CaliptraError::new_const(0x01030001);

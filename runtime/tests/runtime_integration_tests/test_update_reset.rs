@@ -4,7 +4,10 @@ use std::mem::size_of;
 
 pub use caliptra_api::SocManager;
 use caliptra_builder::{
-    firmware::{runtime_tests::MBOX, APP_WITH_UART, FMC_WITH_UART},
+    firmware::{
+        runtime_tests::{MBOX, MBOX_WITHOUT_UART},
+        APP_WITH_UART, FMC_FAKE_WITH_UART, FMC_WITH_UART,
+    },
     FwId, ImageOptions,
 };
 use caliptra_common::mailbox_api::{
@@ -12,8 +15,12 @@ use caliptra_common::mailbox_api::{
 };
 use caliptra_drivers::PcrResetCounter;
 use caliptra_error::CaliptraError;
-use caliptra_hw_model::{DefaultHwModel, HwModel};
+use caliptra_hw_model::{
+    BootParams, DefaultHwModel, DeviceLifecycle, Fuses, HwModel, InitParams, ModelError,
+    SecurityState,
+};
 use caliptra_runtime::{ContextState, RtBootStatus, PL0_DPE_ACTIVE_CONTEXT_THRESHOLD};
+use caliptra_test::bytes_to_be_words_48;
 use dpe::{
     context::{Context, ContextHandle, ContextType},
     response::DpeErrorCode,
@@ -21,6 +28,7 @@ use dpe::{
     validation::ValidationError,
     DpeInstance, U8Bool, DPE_PROFILE, MAX_HANDLES,
 };
+use openssl::sha::sha384;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::common::{run_rt_test, RuntimeTestArgs};
@@ -339,4 +347,298 @@ fn test_pcr_reset_counter_persistence() {
     assert_eq!(pcr_reset_counter_1, pcr_reset_counter_2);
     // check that the pcr reset counters are not default
     assert_ne!(pcr_reset_counter_1, [0u8; size_of::<PcrResetCounter>()]);
+}
+
+fn get_image_opts(epoch: &[u8; 2], svn: u32) -> ImageOptions {
+    let mut options = ImageOptions {
+        app_svn: svn,
+        ..Default::default()
+    };
+
+    options.owner_config.as_mut().unwrap().epoch = *epoch;
+    options
+}
+
+fn cold_update_to_svn(model: DefaultHwModel, epoch: &[u8; 2], svn: u32) -> DefaultHwModel {
+    drop(model);
+    run_rt_test(RuntimeTestArgs {
+        test_fwid: Some(&MBOX),
+        test_image_options: Some(get_image_opts(epoch, svn)),
+        ..Default::default()
+    })
+}
+
+fn runtime_update_to_svn(model: &mut DefaultHwModel, epoch: &[u8; 2], svn: u32) {
+    update_fw(model, &MBOX, get_image_opts(epoch, svn));
+}
+
+fn get_chain_digest(model: &mut DefaultHwModel, target_svn: u32) -> Vec<u8> {
+    let digest = model
+        .mailbox_execute(0xF000_0000, target_svn.as_bytes())
+        .unwrap()
+        .unwrap();
+
+    assert!(!digest.is_empty());
+    digest
+}
+
+fn assert_target_svn_too_large(model: &mut DefaultHwModel, target_svn: u32) {
+    assert_eq!(
+        model.mailbox_execute(0xF000_0000, target_svn.as_bytes()),
+        Err(ModelError::MailboxCmdFailed(u32::from(
+            CaliptraError::RUNTIME_HASH_CHAIN_TARGET_SVN_TOO_LARGE,
+        )))
+    );
+}
+
+const MAX_SVN: u32 = 128;
+
+#[test]
+fn test_hash_chain_cold_boot() {
+    let epoch = [0x00, 0x01];
+
+    let mut model = run_rt_test(RuntimeTestArgs {
+        test_fwid: Some(&MBOX),
+        test_image_options: Some(get_image_opts(&epoch, 0)),
+        ..Default::default()
+    });
+
+    let chain_0 = get_chain_digest(&mut model, 0);
+
+    model = cold_update_to_svn(model, &epoch, 1);
+
+    // FW should now have a different hash chain.
+    let chain_1 = get_chain_digest(&mut model, 1);
+
+    // Ask FW to extend the chain once before returning a digest.
+    let chain_0_from_1 = get_chain_digest(&mut model, 0);
+
+    assert_ne!(chain_0_from_1, chain_1);
+    assert_eq!(chain_0_from_1, chain_0);
+
+    // Update to the max SVN supported by ROM.
+    model = cold_update_to_svn(model, &epoch, MAX_SVN);
+
+    let chain_max = get_chain_digest(&mut model, MAX_SVN);
+
+    // Ask FW for a secret available to SVN 1.
+    let chain_1_from_max = get_chain_digest(&mut model, 1);
+
+    assert_ne!(chain_1_from_max, chain_max);
+    assert_eq!(chain_1_from_max, chain_1);
+}
+
+#[test]
+fn test_hash_chain_runtime_update() {
+    let epoch = [0x00, 0x01];
+
+    let mut model = run_rt_test(RuntimeTestArgs {
+        test_fwid: Some(&MBOX),
+        test_image_options: Some(get_image_opts(&epoch, 5)),
+        ..Default::default()
+    });
+
+    // Start at SVN 5. (Min-SVN = 5)
+    let chain_5 = get_chain_digest(&mut model, 5);
+
+    // Update to SVN 6. (Min-SVN = 5)
+    runtime_update_to_svn(&mut model, &epoch, 6);
+    let chain_6 = get_chain_digest(&mut model, 5);
+    assert_eq!(chain_5, chain_6);
+
+    // Try to get a secret for SVN 6 while the min-SVN is still 5.
+    assert_target_svn_too_large(&mut model, 6);
+
+    // Downgrade to SVN 4. (Min-SVN = 4)
+    runtime_update_to_svn(&mut model, &epoch, 4);
+    let chain_4 = get_chain_digest(&mut model, 4);
+    assert_ne!(chain_4, chain_5);
+
+    assert_target_svn_too_large(&mut model, 5);
+
+    // Upgrade to SVN 5. (Min-SVN = 4)
+    runtime_update_to_svn(&mut model, &epoch, 5);
+    let chain_5_after_4 = get_chain_digest(&mut model, 4);
+    assert_eq!(chain_5_after_4, chain_4);
+
+    assert_target_svn_too_large(&mut model, 5);
+
+    // Upgrade to SVN 6. (Min-SVN = 4)
+    runtime_update_to_svn(&mut model, &epoch, 6);
+    let chain_6_after_4 = get_chain_digest(&mut model, 4);
+    assert_eq!(chain_6_after_4, chain_4);
+
+    assert_target_svn_too_large(&mut model, 5);
+    assert_target_svn_too_large(&mut model, 6);
+
+    // Cold-boot to SVN 6 (Min-SVN = 6)
+    model = cold_update_to_svn(model, &epoch, 6);
+    let chain_6_after_boot = get_chain_digest(&mut model, 6);
+    assert_ne!(chain_6_after_boot, chain_6_after_4);
+
+    let chain_5_from_6 = get_chain_digest(&mut model, 5);
+    let chain_4_from_6 = get_chain_digest(&mut model, 4);
+    assert_eq!(chain_5_from_6, chain_5);
+    assert_eq!(chain_4_from_6, chain_4);
+
+    // Can still get its own secret after deriving older ones.
+    let chain_6_from_self = get_chain_digest(&mut model, 6);
+    assert_eq!(chain_6_from_self, chain_6_after_boot);
+
+    assert_target_svn_too_large(&mut model, 7);
+
+    // Downgrade to SVN 5 (Min-SVN = 5)
+    runtime_update_to_svn(&mut model, &epoch, 5);
+    let chain_5_after_boot = get_chain_digest(&mut model, 5);
+    assert_eq!(chain_5_after_boot, chain_5);
+
+    let chain_4_from_5 = get_chain_digest(&mut model, 4);
+    assert_eq!(chain_4_from_5, chain_4);
+
+    assert_target_svn_too_large(&mut model, 6);
+}
+
+#[test]
+fn test_hash_chain_across_warm_boot_epoch_changes() {
+    let epoch_a = [0x00, 0x01];
+    let epoch_b = [0x00, 0x02];
+
+    let mut model = run_rt_test(RuntimeTestArgs {
+        test_fwid: Some(&MBOX),
+        test_image_options: Some(get_image_opts(&epoch_a, 1)),
+        ..Default::default()
+    });
+
+    let chain_a = get_chain_digest(&mut model, 1);
+
+    runtime_update_to_svn(&mut model, &epoch_b, 1);
+    let chain_b = get_chain_digest(&mut model, 1);
+
+    // A runtime update of the epoch does not affect the hash chain.
+    assert_eq!(chain_a, chain_b);
+}
+
+#[test]
+fn test_hash_chain_across_cold_boot_epoch_changes() {
+    let epoch_a = [0x00, 0x01];
+    let epoch_b = [0x00, 0x02];
+
+    let mut model = run_rt_test(RuntimeTestArgs {
+        test_fwid: Some(&MBOX),
+        test_image_options: Some(get_image_opts(&epoch_a, 1)),
+        ..Default::default()
+    });
+
+    let chain_a = get_chain_digest(&mut model, 1);
+
+    // Same SVN, different epoch.
+    model = cold_update_to_svn(model, &epoch_b, 1);
+
+    let chain_b = get_chain_digest(&mut model, 1);
+
+    assert_ne!(chain_a, chain_b);
+}
+
+#[test]
+fn test_hash_chain_max_svn() {
+    let mut model = run_rt_test(RuntimeTestArgs {
+        test_fwid: Some(&MBOX),
+        ..Default::default()
+    });
+
+    let resp = model.mailbox_execute(0xE000_0000, &[]).unwrap().unwrap();
+
+    let max = u16::from_le_bytes(resp.try_into().unwrap());
+    assert_eq!(max as u32, MAX_SVN);
+}
+
+fn make_model_with_security_state(
+    fmc: &FwId<'static>,
+    app: &FwId<'static>,
+    debug_locked: bool,
+    lifecycle: DeviceLifecycle,
+) -> DefaultHwModel {
+    let security_state = *SecurityState::default()
+        .set_debug_locked(debug_locked)
+        .set_device_lifecycle(lifecycle);
+
+    let rom = caliptra_builder::rom_for_fw_integration_tests().unwrap();
+    let image = caliptra_builder::build_and_sign_image(fmc, app, ImageOptions::default()).unwrap();
+    let vendor_pk_desc_hash = bytes_to_be_words_48(&sha384(
+        image.manifest.preamble.vendor_pub_key_info.as_bytes(),
+    ));
+    let owner_pk_desc_hash = bytes_to_be_words_48(&sha384(
+        image.manifest.preamble.owner_pub_key_info.as_bytes(),
+    ));
+
+    let mut model = caliptra_hw_model::new(
+        InitParams {
+            rom: &rom,
+            security_state,
+            ..Default::default()
+        },
+        BootParams {
+            fuses: Fuses {
+                key_manifest_pk_hash: vendor_pk_desc_hash,
+                owner_pk_hash: owner_pk_desc_hash,
+                ..Default::default()
+            },
+            fw_image: Some(&image.to_bytes().unwrap()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    model.step_until(|m| m.soc_ifc().cptra_flow_status().read().ready_for_fw());
+    model
+}
+
+#[test]
+fn test_hash_chain_changes_with_lifecycle() {
+    // Test with several combinations of security state.
+
+    let mut model =
+        make_model_with_security_state(&FMC_WITH_UART, &MBOX, false, DeviceLifecycle::Production);
+    let chain_a = get_chain_digest(&mut model, 0);
+
+    model = make_model_with_security_state(
+        &FMC_WITH_UART,
+        &MBOX,
+        false,
+        DeviceLifecycle::Manufacturing,
+    );
+    let chain_b = get_chain_digest(&mut model, 0);
+
+    model =
+        make_model_with_security_state(&FMC_WITH_UART, &MBOX, true, DeviceLifecycle::Production);
+    let chain_c = get_chain_digest(&mut model, 0);
+
+    model =
+        make_model_with_security_state(&FMC_WITH_UART, &MBOX, true, DeviceLifecycle::Manufacturing);
+    let chain_d = get_chain_digest(&mut model, 0);
+
+    assert_ne!(chain_a, chain_b);
+    assert_ne!(chain_a, chain_c);
+    assert_ne!(chain_a, chain_d);
+
+    assert_ne!(chain_b, chain_c);
+    assert_ne!(chain_b, chain_d);
+
+    assert_ne!(chain_c, chain_d);
+}
+
+#[test]
+fn test_hash_chain_stable_across_fw_updates() {
+    // Update both FMC and app FW, and ensure the hash chain is still identical.
+
+    let (fmc_a, app_a) = (&FMC_WITH_UART, &MBOX);
+    let (fmc_b, app_b) = (&FMC_FAKE_WITH_UART, &MBOX_WITHOUT_UART);
+
+    let mut model = make_model_with_security_state(fmc_a, app_a, true, DeviceLifecycle::Production);
+    let chain_a = get_chain_digest(&mut model, 0);
+
+    model = make_model_with_security_state(fmc_b, app_b, true, DeviceLifecycle::Production);
+    let chain_b = get_chain_digest(&mut model, 0);
+
+    assert_eq!(chain_a, chain_b);
 }
